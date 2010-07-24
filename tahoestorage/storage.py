@@ -36,6 +36,9 @@ class TahoeStorage(FileSystemStorage):
     def _open(self, name, mode='rb'):
         # opening read-only, so just fetch it and wrap it in File
         # could be troublesome on large files since it will keep it in memory
+        # and i don't really know what to do if they try to open it for writing
+        if mode != 'rb':
+            raise NotImplemented
         return File(GET(self.url()))
 
     def _save(self, name, content):
@@ -50,7 +53,6 @@ class TahoeStorage(FileSystemStorage):
         return name
 
     def delete(self, name):
-        print "delete(%s)" % name
         (path,fname) = os.path.split(name)
         dircap = self._dir_cap(path)
         url = self._tahoe_url(dircap)
@@ -60,15 +62,16 @@ class TahoeStorage(FileSystemStorage):
              async=False)
 
     def exists(self, name):
-        print "exists(%s)" % name
-        pass
+        (path,fname) = os.path.split(name)
+        children = self._info(self._dir_cap(path))
+        return children.has_key(fname)
 
     def listdir(self, path):
         children = self._info(self._dir_cap(path))
         return children.keys()
 
     def path(self, name):
-        print "path(%s)" % name
+        # no actual filesystem path so can't give this
         return None
 
     def size(self, name):
