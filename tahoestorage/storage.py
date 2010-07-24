@@ -70,8 +70,9 @@ class TahoeStorage(FileSystemStorage):
 #        return self.bucket.get_key(name).size
 
     def url(self, name):
-        print "url(%s)" % name
-        pass
+        cap = self._file_cap(name)
+        (path,fname) = os.path.split(name)
+        return settings.TAHOE_PUBLIC_BASE_URL + "file/" + urllib2.quote(cap) + "/@@named=/" + urllib2.quote(fname)
 #        return Key(self.bucket, name).generate_url(100000)
     
     def get_available_name(self, name):
@@ -117,7 +118,11 @@ class TahoeStorage(FileSystemStorage):
         return dc(self.tahoe_base_cap,path)
 
     def _file_cap(self,name):
-        pass
+        (path,fname) = os.path.split(name)
+        dircap = self._dir_cap(path)
+        child_info = self._children(dircap)[fname]
+        return child_info[1]['ro_uri']
+        
 
     def _json_url(self,cap):
         return self.tahoe_base_url + "uri/" + urllib2.quote(cap) + "/?t=json"
