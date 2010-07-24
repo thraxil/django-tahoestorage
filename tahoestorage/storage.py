@@ -34,7 +34,9 @@ class TahoeStorage(FileSystemStorage):
     ###### Django File Storage methods to override
 
     def _open(self, name, mode='rb'):
-        print "_open(%s)" % name
+        # opening read-only, so just fetch it and wrap it in File
+        # could be troublesome on large files since it will keep it in memory
+        return File(GET(self.url()))
 
     def _save(self, name, content):
         (path,fname) = os.path.split(name)
@@ -49,6 +51,12 @@ class TahoeStorage(FileSystemStorage):
 
     def delete(self, name):
         print "delete(%s)" % name
+        # needs to delete file from the parent directory
+        """<form action="../../uri/URI%3ADIR2%3Apokuyei4ipgycbolwnvu5nuiry%3Akppy2lstwccusph2mycqytz4foqyc4avxyzena6ukiozqp2dr7ha/" 
+        method="post"><input type="hidden" name="t" value="delete" />
+        <input type="hidden" name="name" value="foo.txt" />
+        <input type="hidden" name="when_done" value="." />
+        <input type="submit" name="del" value="del" /></form>"""
         pass
 
     def exists(self, name):
