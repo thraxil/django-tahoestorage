@@ -51,13 +51,13 @@ class TahoeStorage(FileSystemStorage):
 
     def delete(self, name):
         print "delete(%s)" % name
-        # needs to delete file from the parent directory
-        """<form action="../../uri/URI%3ADIR2%3Apokuyei4ipgycbolwnvu5nuiry%3Akppy2lstwccusph2mycqytz4foqyc4avxyzena6ukiozqp2dr7ha/" 
-        method="post"><input type="hidden" name="t" value="delete" />
-        <input type="hidden" name="name" value="foo.txt" />
-        <input type="hidden" name="when_done" value="." />
-        <input type="submit" name="del" value="del" /></form>"""
-        pass
+        (path,fname) = os.path.split(name)
+        dircap = self._dir_cap(path)
+        url = self._tahoe_url(dircap)
+        POST(url,params={'t':"delete",
+                         'name':fname,
+                         'del':"del"},
+             async=False)
 
     def exists(self, name):
         print "exists(%s)" % name
