@@ -56,9 +56,8 @@ class TahoeStorage(FileSystemStorage):
         pass
 
     def listdir(self, path):
-        print "listdir(%s)" % path
-#        return [key.name for key in self.bucket.list()]
-        pass
+        children = self._info(self._dir_cap(path))
+        return children.keys()
 
     def path(self, name):
         print "path(%s)" % name
@@ -73,7 +72,6 @@ class TahoeStorage(FileSystemStorage):
         cap = self._file_cap(name)
         (path,fname) = os.path.split(name)
         return settings.TAHOE_PUBLIC_BASE_URL + "file/" + urllib2.quote(cap) + "/@@named=/" + urllib2.quote(fname)
-#        return Key(self.bucket, name).generate_url(100000)
     
     def get_available_name(self, name):
         print "get_available_name(%s)" % name
