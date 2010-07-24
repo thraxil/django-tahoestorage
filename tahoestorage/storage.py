@@ -64,9 +64,10 @@ class TahoeStorage(FileSystemStorage):
         return None
 
     def size(self, name):
-        print "size(%s)" % name
-        pass
-#        return self.bucket.get_key(name).size
+        cap = self._file_cap(name)
+        url = settings.TAHOE_PUBLIC_BASE_URL + "file/" + urllib2.quote(cap) + "?t=json"
+        info = loads(GET(url))
+        return info[1]['size']
 
     def url(self, name):
         cap = self._file_cap(name)
