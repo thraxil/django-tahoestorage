@@ -19,13 +19,10 @@ import itertools
 class TahoeStorage(FileSystemStorage):
     def __init__(self, tahoe_base_url=settings.TAHOE_STORAGE_BASE_URL, 
                  tahoe_base_cap=settings.TAHOE_STORAGE_BASE_CAP,
-                 location=None,base_url=None):
+                 location=None,base_url=settings.TAHOE_PUBLIC_BASE_URL):
         # make sure streaming uploader is initialized
         register_openers()
 
-        if location is None:
-            location = settings.MEDIA_ROOT
-        self.location = os.path.abspath(location)
         self.tahoe_base_url = tahoe_base_url
         self.tahoe_base_cap = tahoe_base_cap
         self.base_url = base_url
@@ -75,14 +72,14 @@ class TahoeStorage(FileSystemStorage):
 
     def size(self, name):
         cap = self._file_cap(name)
-        url = settings.TAHOE_PUBLIC_BASE_URL + "file/" + urllib2.quote(cap) + "?t=json"
+        url = settings.base_url + "file/" + urllib2.quote(cap) + "?t=json"
         info = loads(GET(url))
         return info[1]['size']
 
     def url(self, name):
         cap = self._file_cap(name)
         (path,fname) = os.path.split(name)
-        return settings.TAHOE_PUBLIC_BASE_URL + "file/" + urllib2.quote(cap) + "/@@named=/" + urllib2.quote(fname)
+        return settings.base_url + "file/" + urllib2.quote(cap) + "/@@named=/" + urllib2.quote(fname)
     
     def get_available_name(self, name):
         if not self.exists(name):
