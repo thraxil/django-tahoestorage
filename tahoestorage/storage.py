@@ -19,13 +19,16 @@ import itertools
 class TahoeStorage(FileSystemStorage):
     def __init__(self, tahoe_base_url=settings.TAHOE_STORAGE_BASE_URL, 
                  tahoe_base_cap=settings.TAHOE_STORAGE_BASE_CAP,
-                 location=None,base_url=settings.TAHOE_PUBLIC_BASE_URL):
+                 base_url=settings.TAHOE_PUBLIC_BASE_URL):
         # make sure streaming uploader is initialized
         register_openers()
 
         self.tahoe_base_url = tahoe_base_url
         self.tahoe_base_cap = tahoe_base_cap
         self.base_url = base_url
+
+        self.__dircap_cache = dict()
+        self.__filecap_cache = dict()
 
     ###### Django File Storage methods to override
 
@@ -59,8 +62,11 @@ class TahoeStorage(FileSystemStorage):
 
     def exists(self, name):
         (path,fname) = os.path.split(name)
-        children = self._children(self._dir_cap(path))
-        return children.has_key(fname)
+        try:
+            children = self._children(self._dir_cap(path))
+            return children.has_key(fname)
+        except KeyError:
+            return False
 
     def listdir(self, path):
         children = self._children(self._dir_cap(path))
@@ -72,14 +78,14 @@ class TahoeStorage(FileSystemStorage):
 
     def size(self, name):
         cap = self._file_cap(name)
-        url = settings.base_url + "file/" + urllib2.quote(cap) + "?t=json"
+        url = self.base_url + "file/" + urllib2.quote(cap) + "?t=json"
         info = loads(GET(url))
         return info[1]['size']
 
     def url(self, name):
         cap = self._file_cap(name)
         (path,fname) = os.path.split(name)
-        return settings.base_url + "file/" + urllib2.quote(cap) + "/@@named=/" + urllib2.quote(fname)
+        return self.base_url + "file/" + urllib2.quote(cap) + "/@@named=/" + urllib2.quote(fname)
     
     def get_available_name(self, name):
         if not self.exists(name):
@@ -102,6 +108,8 @@ class TahoeStorage(FileSystemStorage):
     def _makedirs(self,path):
         """ styled after os.makedirs, creates all the directories for the full path"""
         """ expects a rooted path like '/a/b/c' and returns the cap for 'c' """
+        if self.__dircap_cache.has_key(path):
+            return self.__dircap_cache[path]
         def md(cap,path):
             if path == "":
                 return cap 
@@ -117,10 +125,14 @@ class TahoeStorage(FileSystemStorage):
                 child_cap = self._mkdir(cap,parts[0])
 
             return md(child_cap,"/".join(rest))
-        return md(self.tahoe_base_cap,path)
+        dircap = md(self.tahoe_base_cap,path)
+        self.__dircap_cache[path] = dircap
+        return dircap
 
     def _dir_cap(self,path):
         """ expects a rooted path like '/a/b/c' and returns the cap for 'c' """
+        if self.__dircap_cache.has_key(path):
+            return self.__dircap_cache[path]
         def dc(cap,path):
             if path == "":
                 return cap 
@@ -134,14 +146,19 @@ class TahoeStorage(FileSystemStorage):
             # assert child_info[0] == "dirnode"
             child_cap = child_info[1]["rw_uri"]
             return dc(child_cap,"/".join(rest))
-        return dc(self.tahoe_base_cap,path)
+        dircap = dc(self.tahoe_base_cap,path)
+        self.__dircap_cache[path] = dircap
+        return dircap
 
     def _file_cap(self,name):
+        if self.__filecap_cache.has_key(name):
+            return self.__filecap_cache[name]
         (path,fname) = os.path.split(name)
         dircap = self._dir_cap(path)
         child_info = self._children(dircap)[fname]
-        return child_info[1]['ro_uri']
-        
+        filecap = child_info[1]['ro_uri']
+        self.__filecap_cache[name] = filecap
+        return filecap
 
     def _json_url(self,cap):
         return self.tahoe_base_url + "uri/" + urllib2.quote(cap) + "/?t=json"
