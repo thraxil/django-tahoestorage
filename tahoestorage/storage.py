@@ -4,11 +4,9 @@
 # TAHOE_STORAGE_BASE_CAP
 # TAHOE_PUBLIC_BASE_URL
 
-from django.db import models
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
 from django.core.files import File
-import os
 import os.path
 from restclient import GET,POST
 from simplejson import loads
@@ -16,6 +14,7 @@ import urllib2
 from poster.encode import multipart_encode
 from poster.streaminghttp import register_openers
 from pprint import pprint
+import itertools
 
 class TahoeStorage(FileSystemStorage):
     def __init__(self, tahoe_base_url=settings.TAHOE_STORAGE_BASE_URL, 
@@ -63,11 +62,11 @@ class TahoeStorage(FileSystemStorage):
 
     def exists(self, name):
         (path,fname) = os.path.split(name)
-        children = self._info(self._dir_cap(path))
+        children = self._children(self._dir_cap(path))
         return children.has_key(fname)
 
     def listdir(self, path):
-        children = self._info(self._dir_cap(path))
+        children = self._children(self._dir_cap(path))
         return children.keys()
 
     def path(self, name):
@@ -86,8 +85,21 @@ class TahoeStorage(FileSystemStorage):
         return settings.TAHOE_PUBLIC_BASE_URL + "file/" + urllib2.quote(cap) + "/@@named=/" + urllib2.quote(fname)
     
     def get_available_name(self, name):
-        print "get_available_name(%s)" % name
-        return name
+        if not self.exists(name):
+            return name
+        else:
+            (path,fname) = os.path.split(name)
+            (base,ext) = os.path.splitext(fname)
+            # If the filename already exists, add an underscore and a number (before
+            # the file extension, if one exists) to the filename until the generated
+            # filename doesn't exist.
+            count = itertools.count(1)
+            while self.exists(name):
+                # file_ext includes the dot.
+                name = os.path.join(path, "%s_%s%s" % (base, count.next(), ext))
+
+            return name
+
 
     ##### "Private" methods
     def _makedirs(self,path):
