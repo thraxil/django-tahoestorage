@@ -1,5 +1,12 @@
+# django-tahoestorage
+
 Let's you use a Tahoe Grid as the storage backend for a Django
 FileField. 
+
+Written by Anders Pearson at the Columbia Center For New Media
+Teaching and Learning (http://ccnmtl.columbia.edu/)
+
+## how to use it
 
 It would look something like this (in your apps' models.py):
 
@@ -9,6 +16,8 @@ It would look something like this (in your apps' models.py):
     
     class Whatever(models.Model):
         file = models.FileField(upload_to='a/b/c/', storage=ts)
+
+### settings
 
 This expects a certain configuration though. You (obviously) need to
 have a Tahoe grid running. In your settings, you will then need to
@@ -47,3 +56,25 @@ to "http://localhost:3456/" and file downloads will come directly via
 Tahoe (this is the most efficient way to do it as it will take full
 advantage of the bittorrent style swarming that Tahoe does). But
 obviously, that won't work for a public site. 
+
+## Performance
+
+Probably not very good. The way Tahoe works and the way Django expects
+to interact with a storage layer are not the most compatible. Tahoe
+doesn't provide a way to traverse multiple directory levels in a
+single step. Each directory level it has to go down requires a
+synchronous HTTP request/response. 
+
+As a consequence, I recommend as minimal an 'upload_to' structure as
+you think you can get away with. The catch is that if there are too
+many files in a directory, the amount of data sent back on each query
+gets very large and also slows things down, so you don't want to go
+too minimal. 
+
+I'm working on some other approaches and caching can help, but this
+will probably never be as performant as a local filestorage backend. 
+
+I'd also recommend trying to avoid using this for very large file
+uploads. This code will stream the uploads and is careful to not try
+to load an entire file into memory on the upload, but it could still
+get very slow and it must block during the upload. 
